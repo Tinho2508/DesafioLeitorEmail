@@ -272,6 +272,7 @@ Este projeto foi desenvolvido como parte de um desafio técnico e está disponí
 
 ## 👤 Autor
 
+Jose Ailton
 Desenvolvido para o desafio AutoU
 
 ## 📧 Contato
