@@ -1,0 +1,23 @@
+Assunto: Erro ao acessar o sistema
+
+Prezados,
+
+Estou com um problema urgente para reportar. Desde ontem pela manhã, não consigo acessar o sistema financeiro. 
+
+Quando tento fazer login, recebo a seguinte mensagem de erro:
+"Erro 500 - Internal Server Error"
+
+Já tentei:
+- Limpar o cache do navegador
+- Usar outro navegador
+- Reiniciar meu computador
+
+O problema persiste. Este acesso é crítico para minhas atividades diárias e preciso de ajuda o mais rápido possível.
+
+Meu usuário: joao.silva@empresa.com.br
+Horário do primeiro erro: 15/01/2025 às 09:30
+
+Agradeço a atenção,
+
+Ailton
+Departamento Financeiro

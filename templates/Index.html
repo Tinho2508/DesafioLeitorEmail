@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classificador Inteligente de Emails</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="8" fill="url(#gradient)"/>
+                    <path d="M10 14L20 22L30 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 14H30V28C30 28.5304 29.7893 29.0391 29.4142 29.4142C29.0391 29.7893 28.5304 30 28 30H12C11.4696 30 10.9609 29.7893 10.5858 29.4142C10.2107 29.0391 10 28.5304 10 28V14Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
+                            <stop offset="0%" stop-color="#667eea"/>
+                            <stop offset="100%" stop-color="#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>Classificador de Emails</h1>
+            </div>
+            <p class="subtitle">Solução inteligente para automação de análise de emails corporativos</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="card">
+                    <h2>Envie seu email para análise</h2>
+                    <p class="description">Faça upload de um arquivo (.txt ou .pdf) ou cole o texto diretamente</p>
+                    
+                    <form id="emailForm">
+                        <!-- Tab Selector -->
+                        <div class="tab-selector">
+                            <button type="button" class="tab active" data-tab="text">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                Colar Texto
+                            </button>
+                            <button type="button" class="tab" data-tab="file">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Upload de Arquivo
+                            </button>
+                        </div>
+
+                        <!-- Text Input Tab -->
+                        <div class="tab-content active" id="text-tab">
+                            <div class="form-group">
+                                <label for="emailText">Conteúdo do Email</label>
+                                <textarea 
+                                    id="emailText" 
+                                    name="email_text" 
+                                    rows="8" 
+                                    placeholder="Cole aqui o conteúdo do email que deseja classificar..."
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Tab -->
+                        <div class="tab-content" id="file-tab">
+                            <div class="file-upload-wrapper">
+                                <input type="file" id="fileInput" name="file" accept=".txt,.pdf" hidden>
+                                <label for="fileInput" class="file-upload-label">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span class="file-upload-text">Clique para selecionar ou arraste um arquivo</span>
+                                    <span class="file-upload-hint">Formatos aceitos: .txt, .pdf (máx. 16MB)</span>
+                                </label>
+                                <div id="fileInfo" class="file-info"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn-submit" id="submitBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 11 12 14 22 4"></polyline>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            Analisar Email
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="card">
+                    <div class="results-header">
+                        <h2>Resultado da Análise</h2>
+                        <button class="btn-secondary" id="newAnalysisBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="1 4 1 10 7 10"></polyline>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                            </svg>
+                            Nova Análise
+                        </button>
+                    </div>
+
+                    <!-- Email Preview -->
+                    <div class="email-preview">
+                        <h3>Email Analisado</h3>
+                        <p id="emailPreview"></p>
+                    </div>
+
+                    <!-- Classification Result -->
+                    <div class="classification-result">
+                        <div class="classification-badge" id="categoryBadge">
+                            <span class="badge-label">Categoria</span>
+                            <span class="badge-value" id="categoryValue"></span>
+                        </div>
+                        <div class="confidence-meter">
+                            <span class="confidence-label">Nível de Confiança</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                            <span class="confidence-value" id="confidenceValue"></span>
+                        </div>
+                    </div>
+
+                    <!-- Suggested Response -->
+                    <div class="suggested-response">
+                        <div class="response-header">
+                            <h3>Resposta Sugerida</h3>
+                            <button class="btn-copy" id="copyBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                Copiar
+                            </button>
+                        </div>
+                        <div class="response-content" id="responseContent"></div>
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="metadata">
+                        <span id="timestampInfo"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analisando email com IA...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage" style="display: none;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span id="errorText"></span>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Desenvolvido com IA | © 2025 | Solução para AutoU Challenge</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
