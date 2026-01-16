@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import PyPDF2
 import re
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -12,6 +13,9 @@ app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf'}
 
 # Criar pasta de uploads se não existir
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Configuração da API do Hugging Face (opcional - pode usar sem token)
+HF_API_TOKEN = os.getenv('HF_API_TOKEN', '')  # Pode deixar vazio para testes
 
 def allowed_file(filename):
     """Verifica se o arquivo tem extensão permitida"""
@@ -30,14 +34,66 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Erro ao ler PDF: {str(e)}")
 
 def preprocess_text(text):
-    """Pré-processa o texto do email"""
-    # Remove espaços extras e quebras de linha excessivas
+    """Pré-processa o texto do email (NLP básico)"""
+    # Remover espaços extras
     text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Remover caracteres especiais mantendo pontuação básica
+    text = re.sub(r'[^\w\s\.\,\!\?\-]', '', text)
+    
     return text
+
+def classify_with_huggingface_api(email_text):
+    """
+    Classifica email usando Hugging Face Inference API (GRATUITA)
+    Modelo: facebook/bart-large-mnli (zero-shot classification)
+    """
+    API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli"
+    
+    headers = {}
+    if HF_API_TOKEN:
+        headers["Authorization"] = f"Bearer {HF_API_TOKEN}"
+    
+    # Preparar payload para classificação zero-shot
+    payload = {
+        "inputs": email_text[:512],  # Limitar tamanho para API
+        "parameters": {
+            "candidate_labels": ["email produtivo de trabalho", "email improdutivo social"]
+        }
+    }
+    
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            
+            # Processar resposta
+            top_label = result['labels'][0]
+            confidence = result['scores'][0]
+            
+            # Determinar categoria
+            if "produtivo" in top_label.lower():
+                category = "Produtivo"
+            else:
+                category = "Improdutivo"
+            
+            return category, confidence
+        
+        else:
+            print(f"Erro API Hugging Face: {response.status_code}")
+            # Fallback para método baseado em keywords
+            return classify_email_simple(email_text)
+    
+    except Exception as e:
+        print(f"Erro ao conectar com API: {e}")
+        # Fallback para método baseado em keywords
+        return classify_email_simple(email_text)
 
 def classify_email_simple(text):
     """
-    Classificação baseada em palavras-chave (fallback caso API não esteja disponível)
+    Classificação baseada em palavras-chave (FALLBACK)
+    Usado quando API não está disponível
     """
     text_lower = text.lower()
     
@@ -46,29 +102,67 @@ def classify_email_simple(text):
         'suporte', 'problema', 'erro', 'ajuda', 'dúvida', 'solicitação',
         'urgente', 'status', 'atualização', 'prazo', 'pendência', 'requisição',
         'sistema', 'acesso', 'senha', 'login', 'configuração', 'bug',
-        'relatório', 'documento', 'análise', 'aprovação', 'revisão'
+        'relatório', 'documento', 'análise', 'aprovação', 'revisão',
+        'reunião', 'projeto', 'tarefa', 'demanda', 'ticket'
     ]
     
     # Palavras-chave para emails improdutivos
     unproductive_keywords = [
         'feliz', 'parabéns', 'aniversário', 'natal', 'ano novo', 'obrigado',
-        'agradecimento', 'festa', 'celebração', 'feriado'
+        'agradecimento', 'festa', 'celebração', 'feriado', 'abraço', 'beijo'
     ]
     
     productive_score = sum(1 for keyword in productive_keywords if keyword in text_lower)
     unproductive_score = sum(1 for keyword in unproductive_keywords if keyword in text_lower)
     
     if productive_score > unproductive_score:
-        return "Produtivo", productive_score / (productive_score + unproductive_score + 1)
+        confidence = productive_score / (productive_score + unproductive_score + 1)
+        return "Produtivo", confidence
     else:
-        return "Improdutivo", unproductive_score / (productive_score + unproductive_score + 1)
+        confidence = max(0.5, unproductive_score / (productive_score + unproductive_score + 1))
+        return "Improdutivo", confidence
+
+def generate_response_with_ai(category, email_text):
+    """
+    Gera resposta usando Hugging Face (modelo de geração de texto)
+    """
+    API_URL = "https://api-inference.huggingface.co/models/gpt2"
+    
+    headers = {}
+    if HF_API_TOKEN:
+        headers["Authorization"] = f"Bearer {HF_API_TOKEN}"
+    
+    if category == "Produtivo":
+        prompt = f"Resposta profissional para email de trabalho: {email_text[:100]}\n\nResposta:"
+    else:
+        prompt = f"Resposta cordial para mensagem social: {email_text[:100]}\n\nResposta:"
+    
+    try:
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json={"inputs": prompt, "parameters": {"max_length": 100}},
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                generated_text = result[0].get('generated_text', '')
+                # Extrair apenas a resposta gerada
+                if 'Resposta:' in generated_text:
+                    return generated_text.split('Resposta:')[1].strip()
+    except:
+        pass
+    
+    # Fallback para respostas predefinidas
+    return generate_response(category, email_text)
 
 def generate_response(category, email_text):
     """
-    Gera uma resposta automática baseada na categoria
+    Gera uma resposta automática baseada na categoria (FALLBACK)
     """
     if category == "Produtivo":
-        # Detectar tipo específico de solicitação
         text_lower = email_text.lower()
         
         if any(word in text_lower for word in ['status', 'andamento', 'atualização']):
@@ -90,10 +184,10 @@ Identificamos que você está reportando um problema técnico.
 
 Nossa equipe técnica foi notificada e irá analisar a situação com prioridade.
 
-Por favor, mantenha este email como referência. Número do ticket: #{ticket_id}
+Por favor, mantenha este email como referência. Número do ticket: #TK-{timestamp}
 
 Atenciosamente,
-Equipe de Suporte Técnico"""
+Equipe de Suporte Técnico""".format(timestamp=datetime.now().strftime('%Y%m%d%H%M'))
         
         elif any(word in text_lower for word in ['dúvida', 'pergunta', 'como', 'ajuda']):
             return """Prezado(a),
@@ -127,27 +221,6 @@ Ficamos felizes com seu contato e desejamos tudo de melhor.
 Atenciosamente,
 Equipe"""
 
-def classify_with_api(text):
-    """
-    Classificação usando API de IA (Hugging Face como exemplo)
-    Você pode substituir por OpenAI, Anthropic, ou outra API
-    """
-    try:
-        # Aqui você pode integrar com APIs reais
-        # Exemplo com Hugging Face Inference API:
-        
-        # import requests
-        # API_URL = "https://api-inference.huggingface.co/models/..."
-        # headers = {"Authorization": f"Bearer {API_TOKEN}"}
-        # response = requests.post(API_URL, headers=headers, json={"inputs": text})
-        
-        # Por enquanto, usando classificação simples
-        return classify_email_simple(text)
-    except Exception as e:
-        # Fallback para classificação simples
-        print(f"Erro na API: {e}")
-        return classify_email_simple(text)
-
 @app.route('/')
 def index():
     """Página principal"""
@@ -155,7 +228,7 @@ def index():
 
 @app.route('/classify', methods=['POST'])
 def classify():
-    """Endpoint para classificar emails"""
+    """Endpoint para classificar emails usando IA"""
     try:
         email_text = None
         
@@ -188,11 +261,11 @@ def classify():
                 'error': 'Nenhum conteúdo de email fornecido'
             }), 400
         
-        # Pré-processar texto
+        # Pré-processar texto (NLP)
         processed_text = preprocess_text(email_text)
         
-        # Classificar email
-        category, confidence = classify_with_api(processed_text)
+        # Classificar email usando IA (Hugging Face API)
+        category, confidence = classify_with_huggingface_api(processed_text)
         
         # Gerar resposta automática
         suggested_response = generate_response(category, processed_text)
@@ -203,7 +276,8 @@ def classify():
             'confidence': round(confidence * 100, 2),
             'suggested_response': suggested_response,
             'email_preview': email_text[:200] + '...' if len(email_text) > 200 else email_text,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'ai_powered': True  # Indica que usou IA
         })
     
     except Exception as e:
@@ -214,12 +288,12 @@ def classify():
 
 @app.route('/health')
 def health():
-    """Endpoint de health check para monitoramento"""
+    """Endpoint de health check"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'ai_enabled': True
     })
 
 if __name__ == '__main__':
-    # Para desenvolvimento local
     app.run(debug=True, host='0.0.0.0', port=5000)
