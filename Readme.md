@@ -1,5 +1,12 @@
 # 📧 Classificador Inteligente de Emails
 
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-2.x-black?logo=flask)](https://flask.palletsprojects.com)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-yellow?logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Development-yellow)](https://github.com/Tinho2508/DesafioLeitorEmail)
+
+
 Solução completa de IA para classificação automática de emails corporativos e geração de respostas inteligentes.
 
 ## 🎯 Sobre o Projeto
